@@ -15,6 +15,17 @@ var defaults = {
         '.jsx': '.js'
     }
 };
+/**
+ * script1-61e0be79.js 转为 script1.js?61e0be79
+ * [0-9a-f]{8,10} 是默认的 rev 配置
+ * @param {String} str 
+ * @returns {String}
+ */
+function manifestKeyConvert(str) {
+    let hash = str.match(/[0-9a-f]{8,10}/)[0];
+    let ret = str.replace(/-[0-9a-f]{8,10}-?/, '');
+    return ret + '?' + hash;
+}
 
 function _getManifestData(file, opts) {
     var data;
@@ -58,10 +69,10 @@ function _getManifestData(file, opts) {
 
 // Issue #30 extnames normalisation
 function _mapExtnames(filename, opts) {
-    Object.keys(opts.extMap).forEach(function (ext) {
-        var extPattern = new RegExp( escPathPattern(ext) + '$' );
-        if (extPattern.test(filename)) {
-            filename = filename.replace(extPattern, opts.extMap[ext]);
+    var fileExt = path.extname(filename);
+    Object.keys(opts.extMap).forEach(function(ext) {
+        if(fileExt === ext) {
+            filename = filename.replace(new RegExp('\\' + ext + '$'), opts.extMap[ext]);
         }
     });
     return filename;
@@ -144,7 +155,7 @@ function revCollector(opts) {
                 dirReplacements.forEach(function (dirRule) {
                     patterns.forEach(function (pattern) {
                         changes.push({
-                            regexp: new RegExp(  dirRule.dirRX + pattern, 'g' ),
+                            regexp: new RegExp(dirRule.dirRX + pattern + '([\\?][\\d\\w]+)?', 'g'),
                             patternLength: (dirRule.dirRX + pattern).length,
                             replacement: _.isFunction(dirRule.dirRpl)
                                             ? dirRule.dirRpl(manifest[key])
@@ -169,9 +180,9 @@ function revCollector(opts) {
                     }
                     prefixDelim += '])';
                     changes.push({
-                        regexp: new RegExp( prefixDelim + pattern, 'g' ),
+                        regexp: new RegExp(prefixDelim + pattern + '([\\?][\\d\\w]+)?', 'g'),
                         patternLength: pattern.length,
-                        replacement: '$1' + manifest[key]
+                        replacement: '$1' + manifestKeyConvert(manifest[key])
                     });
                 });
             }
